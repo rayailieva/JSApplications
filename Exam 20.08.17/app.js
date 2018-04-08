@@ -38,8 +38,6 @@ function startApp() {
         showView('viewCatalog');
     }
 
-
-
     function showView(viewName) {
         // Hide all views and show the selected view only
         $('main > section').hide();
@@ -94,29 +92,7 @@ function startApp() {
         showError(errorMsg);
     }
 
-    function loginUser(event) {
-        event.preventDefault();
 
-        let userData = {
-            username: $('#loginForm input[name=username]').val(),
-            password: $('#loginForm input[name=password]').val()
-        };
-        $.ajax({
-            method: "POST",
-            url: kinveyBaseUrl + "user/" + kinveyAppKey + "/login",
-            headers: kinveyAppAuthHeaders,
-            data: userData,
-            success: loginSuccess,
-            error: handleAjaxError
-        });
-
-        function loginSuccess(userInfo) {
-            saveAuthInSession(userInfo);
-            showHideMenuLinks();
-
-            showInfo('Login successful.');
-        }
-    }
 
     function saveAuthInSession(userInfo) {
         let userAuth = userInfo._kmd.authtoken;
@@ -149,8 +125,32 @@ function startApp() {
         function registerSuccess(userInfo) {
             saveAuthInSession(userInfo);
             showHideMenuLinks();
-
+            $('form input[type=text], form input[type=password]').val('');
             showInfo('User registration successful.');
+        }
+    }
+
+    function loginUser(event) {
+        event.preventDefault();
+
+        let userData = {
+            username: $('#loginForm input[name=username]').val(),
+            password: $('#loginForm input[name=password]').val()
+        };
+        $.ajax({
+            method: "POST",
+            url: kinveyBaseUrl + "user/" + kinveyAppKey + "/login",
+            headers: kinveyAppAuthHeaders,
+            data: userData,
+            success: loginSuccess,
+            error: handleAjaxError
+        });
+
+        function loginSuccess(userInfo) {
+            saveAuthInSession(userInfo);
+            showHideMenuLinks();
+            $('form input[type=text], form input[type=password]').val('');
+            showInfo('Login successful.');
         }
     }
 

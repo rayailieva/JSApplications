@@ -6,76 +6,35 @@ function startApp() {
     const kinveyAppAuthHeaders = {
         "Authorization": "Basic " + btoa(kinveyAppKey + ":" + kinveyAppSecret)
     };
-    // Clear user auth information at startup
     sessionStorage.clear();
-
     showHideMenuLinks();
-    showView('viewAppHome');
+    showAppHomeView();
 
-    $('#loadingBox').hide();
-    $('#infoBox').hide();
-    $('#errorBox').hide();
+    $('#linkMenuAppHome').click(showAppHomeView);
+    $('#linkMenuLogin').click(showLoginView);
+    $('#linkMenuRegister').click(showRegisterView);
 
-    // Bind the info / error boxes
-    $("#infoBox, #errorBox").click(function () {
+    $('#linkMenuUserHome').click(showUserHomeView);
+    $('#linkMenuLogout').click(logoutUser);
+
+    $('#formRegister').submit(registerUser);
+    $('#formLogin').submit(loginUser);
+
+    $('#linkMenuShop, #linkUserHomeShop').click(showShop);
+    $('#linkMenuCart, #linkUserHomeCart').click(showCart);
+
+    $('#infoBox, #errorBox').click(function () {
         $(this).fadeOut();
     });
 
-    function showInfo(message) {
-        $('#infoBox').text(message);
-        $('#infoBox').show();
-        setTimeout(function() {
-            $('#infoBox').fadeOut();
-        }, 3000);
-    }
-
-    function showError(errorMsg) {
-        $('#errorBox').text("Error: " + errorMsg);
-        $('#errorBox').show();
-    }
-
-    function handleAjaxError(response) {
-        let errorMsg = JSON.stringify(response);
-        if (response.readyState === 0)
-            errorMsg = "Cannot connect due to network error.";
-        if (response.responseJSON && response.responseJSON.description)
-            errorMsg = response.responseJSON.description;
-        showError(errorMsg);
-    }
-
-    // Attach AJAX "loading" event listener
     $(document).on({
         ajaxStart: function () {
-            $("#loadingBox").show()
+            $('#loadingBox').show();
         },
         ajaxStop: function () {
-            $("#loadingBox").hide()
+            $('#loadingBox').hide();
         }
     });
-
-    function showView(viewName) {
-        // Hide all views and show the selected view only
-        $('main > section').hide();
-        $('#' + viewName).show();
-    }
-
-    // Bind the navigation menu links
-    $("#linkMenuAppHome").click(showHomeView);
-    $("#linkMenuLogin").click(showLoginView);
-    $("#linkMenuRegister").click(showRegisterView);
-    $("#linkMenuUserHome").click(showUserHomeView);
-
-    $("#linkMenuShop").click(showShopView);
-    $("#linkUserHomeShop").click(showShopView);
-
-    $("#linkMenuCart").click(showCartView);
-    $("#linkUserHomeCart").click(showCartView);
-
-    $("#linkLogout").click(logoutUser);
-
-    // Bind the form submit buttons
-    $("#formLogin").submit(loginUser);
-    $("#formRegister").submit(registerUser);
 
     function showHideMenuLinks() {
         $('main > div').hide();
@@ -88,18 +47,97 @@ function startApp() {
         }
     }
 
+    function showView(viewName) {
+        $('main > section').hide();
+        $('#' + viewName).show();
+    }
 
-    function showHomeView() {
-        showView('viewHome');
+    function showAppHomeView() {
+        showView('viewAppHome');
+    }
+
+    function showLoginView() {
+        showView('viewLogin');
+    }
+
+    function showRegisterView() {
+        showView('viewRegister');
     }
 
     function showUserHomeView() {
         showView('viewUserHome');
     }
 
-    function showLoginView() {
-        showView('viewLogin');
-        $('#formLogin').trigger('reset');
+    function showShopView() {
+        showView('viewShop');
+    }
+
+    function showCartView() {
+        showView('viewCart');
+    }
+
+
+    function handleAjaxError(response) {
+        let errorMsg = JSON.stringify(response);
+        if(response.readyState === 0) {
+            errorMsg = "Cannot connect due to network error.";
+        }
+        if(response.responseJSON && response.responseJSON.description) {
+            errorMsg = response.responseJSON.description;
+        }
+
+        showError(errorMsg);
+    }
+
+    function showInfo(message) {
+        $('#infoBox').text(message);
+        $('#infoBox').show();
+        setTimeout(function () {
+            $('#infoBox').fadeOut();
+        }, 3000);
+    }
+
+    function showError(errorMsg) {
+        $('#errorBox').text("Error: " + errorMsg);
+        $('#errorBox').show();
+    }
+
+    function registerUser(event) {
+        event.preventDefault();
+        let userData = {
+            username: $('#formRegister input[name=username]').val(),
+            password: $('#formRegister input[name=password]').val(),
+            name: $('#formRegister input[name=name]').val(),
+            cart: {}
+        };
+
+        $.ajax({
+            method: "POST",
+            url: kinveyBaseUrl + "user/" + kinveyAppKey + "/",
+            headers: kinveyAppAuthHeaders,
+            data: userData,
+            success: registerSuccess,
+            error: handleAjaxError
+        });
+
+        function registerSuccess(userInfo) {
+            $('form input[type=text], form input[type=password]').val('');
+            saveAuthInSession(userInfo);
+            showHideMenuLinks();
+            showUserHomeView();
+            showInfo('User registration successful.');
+        }
+    }
+
+    function saveAuthInSession(userInfo) {
+        let userAuth = userInfo._kmd.authtoken;
+        sessionStorage.setItem('authToken', userAuth);
+        let id = userInfo._id;
+        sessionStorage.setItem('id', id);
+        let username = userInfo.username;
+        sessionStorage.setItem('username', username);
+        $('#spanMenuLoggedInUser').text("Welcome, " + username + "!");
+        $('#viewUserHomeHeading').text("Welcome, " + username + "!");
     }
 
     function loginUser(event) {
@@ -125,76 +163,33 @@ function startApp() {
             showHideMenuLinks();
             showUserHomeView();
             showInfo('Login successful.');
-
-        }
-    }
-
-    function saveAuthInSession(userInfo) {
-        let userAuth = userInfo._kmd.authtoken;
-        sessionStorage.setItem('authToken', userAuth);
-        let userId = userInfo._id;
-        sessionStorage.setItem('userId', userId);
-        let username = userInfo.username;
-        $('#spanMenuLoggedInUser').text("Welcome, " + username + "!");
-        $('#viewUserHomeHeading').text("Welcome, " + username + "!");
-    }
-
-    function showRegisterView() {
-        $('#formRegister').trigger('reset');
-        showView('viewRegister');
-    }
-
-    function registerUser(ev) {
-        ev.preventDefault();
-        const kinveyRegisterUrl = kinveyBaseUrl + "user/" + kinveyAppKey + "/";
-        let userData = {
-            username: $('#formRegister input[name=username]').val(),
-            password: $('#formRegister input[name=passwd]').val(),
-            name: $('#formRegister input[name=name]').val()
-        };
-        $.ajax({
-            method: "POST",
-            url: kinveyRegisterUrl,
-            headers: kinveyAppAuthHeaders,
-            data: userData,
-            success: registerSuccess,
-            error: handleAjaxError
-        });
-
-        function registerSuccess(userInfo) {
-            saveAuthInSession(userInfo);
-            showHideMenuLinks();
-            showUserHomeView();
-            showInfo('User registration successful.');
         }
     }
 
     function logoutUser() {
-        sessionStorage.clear();
-        $('#spanMenuLoggedInUser').text("");
-        showHideMenuLinks();
-        showHomeView();
-        showInfo('Logout successful.');
-    }
+        $.ajax({
+            method: "POST",
+            url: kinveyBaseUrl + "user/" + kinveyAppKey + "/_logout",
+            headers: getKinveyUserAuthHeaders(),
+            success: logoutSuccess,
+            error: handleAjaxError
+        });
 
-    function showShopView() {
-        showView('viewShop');
-    }
-
-    function showCartView() {
-        showView('viewCart');
+        function logoutSuccess() {
+            sessionStorage.clear();
+            showHideMenuLinks();
+            showAppHomeView();
+            showInfo("Logout successful.");
+        }
     }
 
     function getKinveyUserAuthHeaders() {
         return {
-            'Authorization': "Kinvey " + sessionStorage.getItem('authToken'),
+            "Authorization": "Kinvey " + sessionStorage.getItem('authToken')
         };
     }
 
-    function displayShop() {
-
-        showView('viewShop');
-
+    function showShop() {
         $.ajax({
             method: "GET",
             url: kinveyBaseUrl + "appdata/" + kinveyAppKey + "/products",
@@ -204,24 +199,115 @@ function startApp() {
         });
 
         function showShopSuccess(products) {
-
             products = products.sort((a,b) => a._id.localeCompare(b._id));
+            $('#shopProducts table tbody').empty();
 
             for(let product of products){
                 let purchaseLink = $('<button>').text('Purchase').click(() => purchaseItem(product));
-
                 $('#shopProducts table tbody')
-                    .append($('<tr>'))
-                    .append($('<td>').text(product.name))
-                    .append($('<td>').text(product.description))
-                    .append($('<td>').text(product.price.toFixed(2)))
-                    .append($('<td>').append(purchaseLink))
+                    .append($('<tr>')
+                        .append($('<td>').text(product.name))
+                        .append($('<td>').text(product.description))
+                        .append($('<td>').text(product.price.toFixed(2)))
+                        .append($('<td>').append(purchaseLink))
+                    );
             }
 
-
+            showShopView();
         }
-
     }
 
+    function showCart() {
+        $.ajax({
+            method: "GET",
+            url: kinveyBaseUrl + "user/" + kinveyAppKey + "/" + sessionStorage.getItem('id'),
+            headers: getKinveyUserAuthHeaders(),
+            success: showCartSuccess,
+            error: handleAjaxError
+        });
+
+        function showCartSuccess(user) {
+            $('#cartProducts table tbody').empty();
+
+            if(! user.cart){
+                user.cart = {};
+            }
+
+            for(let productId of Object.keys(user.cart)){
+                let discardLink = $('<button>').text('Discard').click(() => discardItem(user, productId));
+                $('#cartProducts table tbody')
+                    .append($('<tr>')
+                        .append($('<td>').text(user.cart[productId].product.name))
+                        .append($('<td>').text(user.cart[productId].product.description))
+                        .append($('<td>').text(user.cart[productId].quantity))
+                        .append($('<td>').text((Number(user.cart[productId].product.price) * Number(user.cart[productId].quantity)).toFixed(2)))
+                        .append($('<td>').append(discardLink))
+                    );
+            }
+
+            showCartView();
+        }
+    }
+
+    function purchaseItem(product) {
+        $.ajax({
+            method: "GET",
+            url: kinveyBaseUrl + "user/" + kinveyAppKey + "/" + sessionStorage.getItem('id'),
+            headers: getKinveyUserAuthHeaders(),
+            success: loadUserSuccess,
+            error: handleAjaxError
+        });
+
+        function loadUserSuccess(user) {
+            if(! user.cart){
+                user.cart = {};
+            }
+
+            if(! user.cart[product._id]){
+                user.cart[product._id] = {};
+                user.cart[product._id].product = {};
+                user.cart[product._id].product.name = product.name;
+                user.cart[product._id].product.description = product.description;
+                user.cart[product._id].product.price = product.price;
+                user.cart[product._id].quantity = 1;
+            } else {
+                user.cart[product._id].quantity = Number(user.cart[product._id].quantity) + 1;
+            }
+
+            let userdata = user;
+
+            $.ajax({
+                method: "PUT",
+                url: kinveyBaseUrl + "user/" + kinveyAppKey + "/" + sessionStorage.getItem('id'),
+                headers: getKinveyUserAuthHeaders(),
+                data: userdata,
+                success: updateUserSuccess,
+                error: handleAjaxError
+            });
+
+            function updateUserSuccess() {
+                showCart();
+                showInfo('Product purchased.')
+            }
+        }
+    }
+
+    function discardItem(user, productId){
+        delete user.cart[productId];
+
+        $.ajax({
+            method: "PUT",
+            url: kinveyBaseUrl + "user/" + kinveyAppKey + "/" + sessionStorage.getItem('id'),
+            headers: getKinveyUserAuthHeaders(),
+            data: user,
+            success: updateUserSuccess,
+            error: handleAjaxError
+        });
+
+        function updateUserSuccess() {
+            showCart();
+            showInfo('Product discarded.');
+        }
+    }
 
 }
