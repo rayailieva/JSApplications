@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="style/comments.css">
     <script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
     <script src="app.js"></script>
+
 </head>
 <body onload="startApp()">
 
@@ -25,7 +26,7 @@
         <div id="menu">
             <div class="title">Navigation</div>
             <a class="nav" href="#" id="linkCatalog">Catalog</a>
-            <a class="nav" href="#" >Create Post</a>
+            <a class="nav" href="#" id="linkCreatePost" >Create Post</a>
             <a class="nav" href="#" id="linkMyPosts">My Posts</a>
             <a class="nav" href="#" >About</a>
         </div>
@@ -46,9 +47,9 @@
                         <label>Username:</label>
                         <input name="username" type="text">
                         <label>Password:</label>
-                        <input name="password" type="password">
+                        <input name="password"   type="password">
                         <label>Repeat Password:</label>
-                        <input name="repeatPass" type="password">
+                        <input name="repeatPass"  type="password">
                         <input id="btnRegister" value="Sign Up" type="submit">
                     </form>
                 </div>
@@ -64,7 +65,7 @@
         </section>
 
         <section id="viewCatalog">
-            <div class="posts">
+            <div class="posts" id="posts">
                 <article class="post">
                     <div class="col rank">
                         <span>1</span>

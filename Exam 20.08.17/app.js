@@ -25,7 +25,10 @@ function startApp() {
     });
 
     // Bind the navigation menu links
-    $('#linkCatalog').click(showCatalogview);
+    $('#linkCatalog').click(showCatalog);
+    //$('#linkCreatePost').click(createPost);
+    $('#linkMyPosts').click(showMyPosts);
+
 
 
     // Bind the form submit buttons
@@ -34,8 +37,14 @@ function startApp() {
     $('#linkMenuLogout').click(logoutUser);
 
 
-    function showCatalogview() {
-        showView('viewCatalog');
+
+    function showMyPosts() {
+        showView('viewMyPosts');
+        $('#viewCatalog').hide();
+        $('#viewSubmit').hide();
+        $('#viewMyPosts').show();
+        $('#viewEdit').hide();
+        $('#viewComments').hide();
     }
 
     function showView(viewName) {
@@ -94,28 +103,18 @@ function startApp() {
 
 
 
-    function saveAuthInSession(userInfo) {
-        let userAuth = userInfo._kmd.authtoken;
-        sessionStorage.setItem('authToken', userAuth);
-        let userId = userInfo._id;
-        sessionStorage.setItem('userId', userId);
-        let username = userInfo.username;
-        $('#username').text("Welcome, " + username + "!");
-    }
-
 
     function registerUser(event) {
         event.preventDefault();
-        const kinveyRegisterUrl = kinveyBaseUrl + "user/" + kinveyAppKey + "/";
         let userData = {
             username: $('#registerForm input[name=username]').val(),
-            password: $('#registerForm input[name=passwd]').val(),
-            repeatPassword: $('#registerForm input[name=repeatPass]').val(),
-
+            password: $('#registerForm input[name=password]').val(),
+            repeatPass: $('#registerForm input[name=repeatPass]').val()
         };
+
         $.ajax({
             method: "POST",
-            url: kinveyRegisterUrl,
+            url: kinveyBaseUrl + "user/" + kinveyAppKey + "/",
             headers: kinveyAppAuthHeaders,
             data: userData,
             success: registerSuccess,
@@ -123,11 +122,22 @@ function startApp() {
         });
 
         function registerSuccess(userInfo) {
+            $('form input[type=text], form input[type=password]').val('');
             saveAuthInSession(userInfo);
             showHideMenuLinks();
-            $('form input[type=text], form input[type=password]').val('');
+            showUserHomeView();
             showInfo('User registration successful.');
         }
+    }
+
+
+    function saveAuthInSession(userInfo) {
+        let userAuth = userInfo._kmd.authtoken;
+        sessionStorage.setItem('authToken', userAuth);
+        let userId = userInfo._id;
+        sessionStorage.setItem('userId', userId);
+        let username = userInfo.username;
+
     }
 
     function loginUser(event) {
@@ -137,6 +147,7 @@ function startApp() {
             username: $('#loginForm input[name=username]').val(),
             password: $('#loginForm input[name=password]').val()
         };
+
         $.ajax({
             method: "POST",
             url: kinveyBaseUrl + "user/" + kinveyAppKey + "/login",
@@ -147,9 +158,9 @@ function startApp() {
         });
 
         function loginSuccess(userInfo) {
+            $('form input[type=text], form input[type=password]').val('');
             saveAuthInSession(userInfo);
             showHideMenuLinks();
-            $('form input[type=text], form input[type=password]').val('');
             showInfo('Login successful.');
         }
     }
@@ -157,10 +168,26 @@ function startApp() {
     function logoutUser() {
         sessionStorage.clear();
         showHideMenuLinks();
-        showView('viewWelcome');
         showInfo('Logout successful.');
+    }
+
+    function getKinveyUserAuthHeaders() {
+        return {
+            "Authorization": "Kinvey " + sessionStorage.getItem('authToken')
+        };
+    }
+
+
+    function showCatalog() {
+        showView('viewCatalog');
+        $('#viewSubmit').hide();
+        $('#viewMyPosts').hide();
+        $('#viewEdit').hide();
+        $('#viewComments').hide();
     }
 
 
 
-}
+
+
+    }

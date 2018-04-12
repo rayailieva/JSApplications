@@ -10,8 +10,19 @@ function startApp() {
 
     // Clear user auth information at startup
     sessionStorage.clear();
+
     showHideMenuLinks();
     showView('viewAppHome');
+
+    // Bind the info / error boxes
+    $("#infoBox, #errorBox").click(function() {
+        $(this).fadeOut();
+    });
+
+    $('#loadingBox').hide();
+    $('#infoBox').hide();
+    $('#errorBox').hide();
+
 
     // Attach AJAX "loading" event listener
     $(document).on({
@@ -19,51 +30,10 @@ function startApp() {
         ajaxStop: function() { $("#loadingBox").hide() }
     });
 
-    $('#loadingBox').hide();
-    $('#infoBox').hide();
-    $('#errorBox').hide();
-
     function showView(viewName) {
         // Hide all views and show the selected view only
         $('main > section').hide();
         $('#' + viewName).show();
-    }
-
-    // Bind the info / error boxes
-    $("#infoBox, #errorBox").click(function() {
-        $(this).fadeOut();
-    });
-
-    // Bind the navigation menu links
-    $("#linkMenuAppHome").click(showHomeView);
-    $("#linkMenuLogin").click(showLoginView);
-    $("#linkMenuRegister").click(showRegisterView);
-    $("#linkMenuUserHome").click(showUserHomeView);
-    $("#linkMenuLogout").click(logoutUser);
-
-    $("#linkMenuMyMessages" ).click(showMyMessages);
-    $("#linkUserHomeMyMessages" ).click(showMyMessages);
-
-    $("#linkMenuArchiveSent").click(showOutbox);
-    $("#linkUserHomeArchiveSent").click(showOutbox);
-
-    $("#linkMenuSendMessage").click(showSendMessageView);
-    $("#linkUserHomeSendMessage").click(showSendMessageView);
-
-    // Bind the form submit buttons
-    $("#formLogin").submit(loginUser);
-    $("#formRegister").submit(registerUser);
-    $('#formSendMessage').submit(sendMessage);
-
-    function showHideMenuLinks() {
-        $('main > div').hide();
-        if(sessionStorage.getItem('authToken')){
-            $('.useronly').show();
-            $('.anonymous').hide();
-        } else {
-            $('.anonymous').show();
-            $('.useronly').hide();
-        }
     }
 
     function showInfo(message) {
@@ -89,22 +59,62 @@ function startApp() {
     }
 
 
+    // Bind the navigation menu links
+    $("#linkMenuAppHome").click(showHomeView);
+    $("#linkMenuLogin").click(showLoginView);
+    $("#linkMenuRegister").click(showRegisterView);
+    $("#linkMenuUserHome").click(showUserHomeView);
+
+    $("#linkMenuMyMessages").click(showMyMessages);
+    $("#linkUserHomeMyMessages").click(showMyMessages);
+
+
+    $("#linkMenuArchiveSent").click(showArchiveView);
+    $("#linkUserHomeArchiveSent").click(showArchiveView);
+
+    $("#linkMenuSendMessage").click(showSendMessageView);
+    $("#linkUserHomeSendMessage").click(showSendMessageView);
+
+    $("#linkMenuLogout").click(logoutUser);
+
+    // Bind the form submit buttons
+    $("#formLogin").submit(loginUser);
+    $("#formRegister").submit(registerUser);
+    $('#formSendMessage').submit(sendMessage);
+
+    function showHideMenuLinks() {
+        if (sessionStorage.getItem('authToken') === null) {
+            // No logged in user
+            $('.anonymous').show();
+            $('.useronly').hide();
+        } else {
+            // We have logged in user
+            $('.anonymous').hide();
+            $('.useronly').show();
+        }
+    }
+
+
     function showHomeView() {
         showView('viewAppHome');
     }
-
     function showLoginView() {
         showView('viewLogin');
-        $('#formLogin').trigger('reset');
     }
-
+    function showRegisterView() {
+        showView('viewRegister');
+    }
     function showUserHomeView() {
         showView('viewUserHome');
     }
-
-    function showRegisterView() {
-        $('#formRegister').trigger('reset');
-        showView('viewRegister');
+    function showMyMessagesView() {
+        showView('viewMyMessages');
+    }
+    function showArchiveView() {
+        showView('viewArchiveSent');
+    }
+    function showSendMessageView() {
+        showView('viewSendMessage');
     }
 
     function registerUser(event) {
@@ -132,7 +142,18 @@ function startApp() {
             showInfo('User registration successful.');
         }
     }
-    
+
+
+    function saveAuthInSession(userInfo) {
+        let userAuth = userInfo._kmd.authtoken;
+        sessionStorage.setItem('authToken', userAuth);
+        let userId = userInfo._id;
+        sessionStorage.setItem('userId', userId);
+        let username = userInfo.username;
+        $('#spanMenuLoggedInUser').text("Welcome, " + username + "!");
+        $('#viewUserHomeHeading').text("Welcome, " + username + "!");
+    }
+
     function loginUser(event) {
         event.preventDefault();
 
@@ -159,34 +180,11 @@ function startApp() {
         }
     }
 
-    function saveAuthInSession(userInfo) {
-        let userAuth = userInfo._kmd.authtoken;
-        sessionStorage.setItem('authToken', userAuth);
-        let userId = userInfo._id;
-        sessionStorage.setItem('userId', userId);
-        let username = userInfo.username;
-        $('#spanMenuLoggedInUser').text("Welcome, " + username + "!");
-        $('#viewUserHomeHeading').text("Welcome, " + username + "!");
-    }
-
     function logoutUser() {
         sessionStorage.clear();
-        $('#loggedInUser').text("");
         showHideMenuLinks();
-        showView('viewAppHome');
+        showHomeView();
         showInfo('Logout successful.');
-    }
-
-    function showMyMessagesView() {
-        showView('viewMyMessages')
-    }
-
-    function showArhiveMessagesView() {
-        showView('viewArchiveSent');
-    }
-
-    function showSendMessageView() {
-        showView('viewSendMessage');
     }
 
     function formatDate(dateISO8601) {
@@ -211,103 +209,34 @@ function startApp() {
 
     function getKinveyUserAuthHeaders() {
         return {
-            "Authorization": "Kinvey " + sessionStorage.getItem('authToken')
+            'Authorization': "Kinvey " + sessionStorage.getItem('authToken'),
         };
     }
-    
+
     function showMyMessages() {
 
+        showMyMessagesView();
+
         $.ajax({
             method: "GET",
-            url: kinveyBaseUrl + "appdata/" + kinveyAppKey + `/messages?query={"recipient_username":"${sessionStorage.getItem('username')}"}`,
+            url: kinveyBaseUrl + "appdata/" + kinveyAppKey +`/messages?query={"recipient_username":"${sessionStorage.getItem('username')}"}`,
             headers: getKinveyUserAuthHeaders(),
-            success: showInboxSuccess,
-            error: handleAjaxError
-        });
-        
-        function showInboxSuccess(messages) {
-          // $('#myMessages table tbody').empty();
-
-           for(let message of messages){
-               $('#myMessages table tbody')
-                   .append($('<tr>')
-                   .append($('<td>').text(formatSender(message.sender_name, message.sender_username)))
-                   .append($('<td>').text(message.text))
-                   .append($('<td>').text(formatDate(message._kmd.lmt)))
-                   );
-           }
-
-            showMyMessagesView();
-
-        }
-
-    }
-
-    function showOutbox() {
-        $.ajax({
-            method: "GET",
-            url: kinveyBaseUrl + "appdata/" + kinveyAppKey + `/messages?query={"sender_username":"${sessionStorage.getItem('username')}"}`,
-            headers: getKinveyUserAuthHeaders(),
-            success: showOutboxSuccess,
+            success: loadMessagesSuccess,
             error: handleAjaxError
         });
 
-        function showOutboxSuccess(messages) {
-            //$('#sentMessages table tbody').empty();
+        function loadMessagesSuccess(messages) {
+
+            $('#myMessages table tbody').empty();
 
             for(let message of messages){
-                let deleteLink = $('<button>').text('Delete').click(() => deleteMessage(message._id));
-                $('#sentMessages table tbody')
+                $('#myMessages table tbody')
                     .append($('<tr>')
-                        .append($('<td>').text(message.recipient_username))
+                        .append($('<td>').text(formatSender(message.sender_name, message.sender_username)))
                         .append($('<td>').text(message.text))
                         .append($('<td>').text(formatDate(message._kmd.lmt)))
-                        .append($('<td>').append(deleteLink))
-                    )
+                    );
             }
-
-            showArhiveMessagesView();
-        }
-    }
-
-    function deleteMessage(id) {
-        $.ajax({
-            method: "DELETE",
-            url: kinveyBaseUrl + "appdata/" + kinveyAppKey + "/messages/" + id,
-            headers: getKinveyUserAuthHeaders(),
-            success: deleteMessageSuccess,
-            error: handleAjaxError
-        });
-
-        function deleteMessageSuccess() {
-            showOutbox();
-            showInfo('Message deleted.');
-        }
-    }
-
-    function loadUsers() {
-        $.ajax({
-            method: "GET",
-            url: kinveyBaseUrl + "user/" + kinveyAppKey,
-            headers: getKinveyUserAuthHeaders(),
-            success: loadUsersSuccess,
-            error: handleAjaxError
-        });
-
-        function loadUsersSuccess(users) {
-            $('#formSendMessage select').empty();
-
-            for(let user of users){
-                let name = null;
-                if(user.name){
-                    name = user.name;
-                }
-
-                $('#formSendMessage select')
-                    .append($('<option>').val(user.username).text(formatSender(name, user.username)));
-            }
-
-            showSendMessageView();
         }
     }
 
@@ -335,6 +264,49 @@ function startApp() {
             showOutbox();
             showInfo('Message sent.');
         }
+        
     }
 
+    function deleteMessage(id) {
+        $.ajax({
+            method: "DELETE",
+            url: kinveyBaseUrl + "appdata/" + kinveyAppKey + "/messages/" + id,
+            headers: getKinveyUserAuthHeaders(),
+            success: deleteMessageSuccess,
+            error: handleAjaxError
+        });
+
+        function deleteMessageSuccess() {
+            showOutbox();
+            showInfo('Message deleted.');
+        }
+    }
+
+    function showOutbox() {
+
+        $.ajax({
+            method: "GET",
+            url: kinveyBaseUrl + "appdata/" + kinveyAppKey + `/messages?query={"sender_username":"${sessionStorage.getItem('username')}"}`,
+            headers: getKinveyUserAuthHeaders(),
+            success: showOutboxSuccess,
+            error: handleAjaxError
+        });
+
+        function showOutboxSuccess(messages) {
+            $('#sentMessages table tbody').empty();
+
+            for(let message of messages){
+                let deleteLink = $('<button>').text('Delete').click(() => deleteMessage(message._id));
+                $('#sentMessages table tbody')
+                    .append($('<tr>')
+                        .append($('<td>').text(message.recipient_username))
+                        .append($('<td>').text(message.text))
+                        .append($('<td>').text(formatDate(message._kmd.lmt)))
+                        .append($('<td>').append(deleteLink))
+                    )
+            }
+
+            showArchiveView();
+        }
+    }
 }
