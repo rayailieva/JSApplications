@@ -345,10 +345,7 @@ function startApp() {
         }
     }
 
-    function  loadComments(post) {
-
-    }
-
+   
 
 
 }
